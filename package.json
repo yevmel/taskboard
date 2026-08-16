@@ -1,0 +1,26 @@
+{
+  "name": "taskboard-2.0",
+  "module": "src/client/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "client:build": "bun build ./src/client/index.ts --outdir ./dist --minify && cp ./src/client/index.html ./dist/index.html",
+    "client:watch": "bun build ./src/client/index.ts --outdir ./dist --watch",
+    "server:start": "bun run ./src/server/index.ts",
+    "server:dev": "bun run --watch ./src/server/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/sanitize-html": "^2.16.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "lit-html": "^3.3.3",
+    "postgres": "^3.4.9",
+    "quill": "^2.0.3",
+    "sanitize-html": "^2.17.7"
+  }
+}

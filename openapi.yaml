@@ -1,0 +1,596 @@
+openapi: 3.0.3
+info:
+  title: TaskBoard API
+  description: >-
+    REST API for the TaskBoard application. The UI consumes the same API that
+    third-party clients can use.
+
+    Conventions:
+
+    - Rich text fields (`description`, comment `body`) are HTML strings that are
+      sanitized server-side (using sanitize-html) before being persisted.
+    - `createdAt` is a timestamp formatted as `YYYY-MM-DD HH:mm:ss` in UTC.
+    - `createdBy` is the username of the author, or `unknown` when no username
+      was provided.
+    - Collection endpoints use a trailing slash (`/api/tasks/`); item endpoints
+      do not (`/api/tasks/1`).
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Tasks
+    description: Create, read and update tasks.
+  - name: Subtasks
+    description: Create, read and update subtasks of a task.
+  - name: Comments
+    description: Comments attached to tasks or subtasks.
+
+paths:
+  /api/tasks/:
+    get:
+      tags: [Tasks]
+      summary: List tasks
+      description: >-
+        Returns the list of all tasks. Every task contains its title, description
+        (sanitized HTML), status, list of subtasks (title and done indicator),
+        created at and created by.
+      responses:
+        "200":
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskSummary"
+    post:
+      tags: [Tasks]
+      summary: Create a task
+      description: >-
+        Creates a new task and returns it including its (initially empty)
+        subtasks and comments. New tasks are always created with status OPEN;
+        the status cannot be set at creation time and is rejected if provided.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskRequest"
+      responses:
+        "201":
+          description: The created task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/tasks/{taskId}:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    get:
+      tags: [Tasks]
+      summary: Get task details
+      description: >-
+        Returns the details of an existing task: title, description, created at,
+        created by, the list of subtasks (with title, description, list of
+        comments and done indicator) and the list of comments.
+      responses:
+        "200":
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Tasks]
+      summary: Update a task
+      description: Updates an existing task. Only the provided fields are changed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskRequest"
+      responses:
+        "200":
+          description: The updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Tasks]
+      summary: Delete a task
+      description: Deletes a task. Its subtasks and all comments are removed as well.
+      responses:
+        "204":
+          description: Task deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/tasks/{taskId}/comments/:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    get:
+      tags: [Comments]
+      summary: List task comments
+      description: Returns the comments of an existing task.
+      responses:
+        "200":
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Comments]
+      summary: Create a task comment
+      description: Creates a comment for an existing task.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+      responses:
+        "201":
+          description: The created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/tasks/{taskId}/comments/{commentId}:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+      - $ref: "#/components/parameters/CommentId"
+    delete:
+      tags: [Comments]
+      summary: Delete a task comment
+      description: Deletes a comment of an existing task.
+      responses:
+        "204":
+          description: Comment deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/tasks/{taskId}/subtasks/:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    get:
+      tags: [Subtasks]
+      summary: List task subtasks
+      description: >-
+        Returns the subtasks of an existing task. Every subtask contains its
+        title, description, list of comments and done indicator.
+      responses:
+        "200":
+          description: List of subtasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubtaskDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Subtasks]
+      summary: Create a subtask
+      description: Creates a new subtask for an existing task.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubtaskRequest"
+      responses:
+        "201":
+          description: The created subtask
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubtaskDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/tasks/{taskId}/subtasks/{subtaskId}:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+      - $ref: "#/components/parameters/SubtaskId"
+    get:
+      tags: [Subtasks]
+      summary: Get subtask details
+      description: >-
+        Returns the details of an existing subtask: title, description and list
+        of comments.
+      responses:
+        "200":
+          description: Subtask details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubtaskDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Subtasks]
+      summary: Update a subtask
+      description: Updates an existing subtask. Only the provided fields are changed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSubtaskRequest"
+      responses:
+        "200":
+          description: The updated subtask
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubtaskDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Subtasks]
+      summary: Delete a subtask
+      description: Deletes an existing subtask (its comments are removed as well).
+      responses:
+        "204":
+          description: Subtask deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/tasks/{taskId}/subtasks/{subtaskId}/comments/:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+      - $ref: "#/components/parameters/SubtaskId"
+    get:
+      tags: [Comments]
+      summary: List subtask comments
+      description: Returns the comments of an existing subtask.
+      responses:
+        "200":
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Comments]
+      summary: Create a subtask comment
+      description: Creates a comment for an existing subtask.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+      responses:
+        "201":
+          description: The created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/tasks/{taskId}/subtasks/{subtaskId}/comments/{commentId}:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+      - $ref: "#/components/parameters/SubtaskId"
+      - $ref: "#/components/parameters/CommentId"
+    delete:
+      tags: [Comments]
+      summary: Delete a subtask comment
+      description: Deletes a comment of an existing subtask.
+      responses:
+        "204":
+          description: Comment deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  parameters:
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      description: ID of the task
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+    SubtaskId:
+      name: subtaskId
+      in: path
+      required: true
+      description: ID of the subtask
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+    CommentId:
+      name: commentId
+      in: path
+      required: true
+      description: ID of the comment
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+
+  responses:
+    BadRequest:
+      description: >-
+        Invalid request: malformed JSON, missing or invalid fields, or a
+        non-numeric path id.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: The referenced task, subtask or comment does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: Task 42 not found
+
+    TaskStatus:
+      type: string
+      enum: [OPEN, IN PROGRESS, DONE]
+      description: Lifecycle status of a task
+
+    Html:
+      type: string
+      description: >-
+        Rich text as sanitized HTML. Input is sanitized server-side (see the
+        API description) before it is stored.
+      example: "<p>Hello</p>"
+
+    Comment:
+      type: object
+      description: A comment attached to a task or a subtask
+      required: [id, body, createdAt, createdBy]
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Comment id
+        body:
+          $ref: "#/components/schemas/Html"
+        createdAt:
+          type: string
+          description: Timestamp in UTC, "YYYY-MM-DD HH:mm:ss"
+          example: "2025-01-15 10:30:00"
+        createdBy:
+          type: string
+          description: Username of the author, or "unknown"
+          example: alice
+
+    SubtaskSummary:
+      type: object
+      description: A subtask as it appears inside a task list (without comments)
+      required: [id, title, done]
+      properties:
+        id:
+          type: integer
+          format: int32
+        title:
+          type: string
+          example: Write the OpenAPI spec
+        done:
+          type: boolean
+          description: Done indicator
+
+    SubtaskDetail:
+      type: object
+      description: Full subtask details, including its comments
+      required: [id, title, description, done, comments, createdAt, createdBy]
+      properties:
+        id:
+          type: integer
+          format: int32
+        title:
+          type: string
+        description:
+          $ref: "#/components/schemas/Html"
+        done:
+          type: boolean
+          description: Done indicator
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
+        createdAt:
+          type: string
+          description: Timestamp in UTC, "YYYY-MM-DD HH:mm:ss"
+        createdBy:
+          type: string
+          description: Username of the author, or "unknown"
+
+    TaskSummary:
+      type: object
+      description: A task as it appears in the task list (subtasks without comments)
+      required: [id, title, description, status, subtasks, createdAt, createdBy]
+      properties:
+        id:
+          type: integer
+          format: int32
+        title:
+          type: string
+          example: Ship TaskBoard 2.0
+        description:
+          $ref: "#/components/schemas/Html"
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        subtasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubtaskSummary"
+        createdAt:
+          type: string
+          description: Timestamp in UTC, "YYYY-MM-DD HH:mm:ss"
+        createdBy:
+          type: string
+          description: Username of the author, or "unknown"
+
+    TaskDetail:
+      type: object
+      description: >-
+        Full task details, including subtasks (with their comments) and the
+        task's own comments
+      required: [id, title, description, status, subtasks, comments, createdAt, createdBy]
+      properties:
+        id:
+          type: integer
+          format: int32
+        title:
+          type: string
+        description:
+          $ref: "#/components/schemas/Html"
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        subtasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubtaskDetail"
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
+        createdAt:
+          type: string
+          description: Timestamp in UTC, "YYYY-MM-DD HH:mm:ss"
+        createdBy:
+          type: string
+          description: Username of the author, or "unknown"
+
+    CreateTaskRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          description: Task title
+          example: Ship TaskBoard 2.0
+        description:
+          $ref: "#/components/schemas/Html"
+        createdBy:
+          type: string
+          description: Username of the creator; defaults to "unknown"
+      description: >-
+        New tasks are always created with status OPEN; providing a `status`
+        field is rejected.
+
+    UpdateTaskRequest:
+      type: object
+      description: Only the provided fields are updated; at least one must be present
+      properties:
+        title:
+          type: string
+        description:
+          $ref: "#/components/schemas/Html"
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        createdBy:
+          type: string
+          description: Username of the creator; defaults to "unknown"
+
+    CreateSubtaskRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          description: Subtask title
+          example: Write the OpenAPI spec
+        description:
+          $ref: "#/components/schemas/Html"
+        createdBy:
+          type: string
+          description: Username of the creator; defaults to "unknown"
+
+    UpdateSubtaskRequest:
+      type: object
+      description: Only the provided fields are updated; at least one must be present
+      properties:
+        title:
+          type: string
+        description:
+          $ref: "#/components/schemas/Html"
+        done:
+          type: boolean
+          description: Done indicator
+        createdBy:
+          type: string
+          description: Username of the creator; defaults to "unknown"
+
+    CreateCommentRequest:
+      type: object
+      required: [body]
+      properties:
+        body:
+          $ref: "#/components/schemas/Html"
+        createdBy:
+          type: string
+          description: Username of the author; defaults to "unknown"
