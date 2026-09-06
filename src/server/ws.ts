@@ -45,10 +45,15 @@ export function handleWsUpgrade(request: Request, server: Bun.Server<WsData>): R
 /** WebSocket lifecycle handlers for Bun.serve. */
 export const websocketHandlers = {
   open(ws: ServerWebSocket<WsData>): void {
+    console.log("client connected: ", ws.data.clientId)
+
     clients.add(ws);
     clientIdBySocket.set(ws, ws.data.clientId);
   },
+
   close(ws: ServerWebSocket<WsData>): void {
+    console.log("client disconnected: ", ws.data.clientId)
+
     clients.delete(ws);
     clientIdBySocket.delete(ws);
   },
